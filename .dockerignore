@@ -1,0 +1,6 @@
+food-inventory-env/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+.env

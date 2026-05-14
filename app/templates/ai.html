@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}AI — Food Inventory{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-5">AI Assistant</h1>
+
+<!-- Meal Suggestion -->
+<section class="mb-6">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <h2 class="text-base font-semibold mb-1">What should I eat?</h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Pick a meal type and AI will suggest something based on your inventory and recent habits — prioritising items expiring soon.
+    </p>
+    <div class="grid grid-cols-2 gap-2">
+      <button
+        hx-post="/ai/suggest-meal"
+        hx-vals='{"meal_type":"BREAKFAST"}'
+        hx-target="#suggestion-result"
+        hx-swap="innerHTML"
+        hx-disabled-elt="closest section button"
+        class="py-3 rounded-xl text-sm font-semibold bg-orange-50 text-orange-700 border border-orange-200 active:bg-orange-100"
+      >Breakfast</button>
+      <button
+        hx-post="/ai/suggest-meal"
+        hx-vals='{"meal_type":"LUNCH"}'
+        hx-target="#suggestion-result"
+        hx-swap="innerHTML"
+        hx-disabled-elt="closest section button"
+        class="py-3 rounded-xl text-sm font-semibold bg-blue-50 text-blue-700 border border-blue-200 active:bg-blue-100"
+      >Lunch</button>
+      <button
+        hx-post="/ai/suggest-meal"
+        hx-vals='{"meal_type":"DINNER"}'
+        hx-target="#suggestion-result"
+        hx-swap="innerHTML"
+        hx-disabled-elt="closest section button"
+        class="py-3 rounded-xl text-sm font-semibold bg-purple-50 text-purple-700 border border-purple-200 active:bg-purple-100"
+      >Dinner</button>
+      <button
+        hx-post="/ai/suggest-meal"
+        hx-vals='{"meal_type":"SNACK"}'
+        hx-target="#suggestion-result"
+        hx-swap="innerHTML"
+        hx-disabled-elt="closest section button"
+        class="py-3 rounded-xl text-sm font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200 active:bg-yellow-100"
+      >Snack</button>
+    </div>
+    <div id="suggestion-result" class="mt-4 text-sm text-gray-400 italic">
+      Pick a meal type above to get a suggestion.
+    </div>
+  </div>
+</section>
+
+<!-- Replenishment -->
+<section class="mb-6">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <h2 class="text-base font-semibold mb-1">What should I restock?</h2>
+    <p class="text-sm text-gray-500 mb-4">
+      Based on how fast you consume items, AI will predict what you'll run out of and when to buy more.
+    </p>
+    <button
+      hx-post="/ai/replenish"
+      hx-target="#replenish-result"
+      hx-swap="innerHTML"
+      hx-disabled-elt="this"
+      class="w-full bg-green-600 text-white font-medium py-3 rounded-xl text-sm disabled:opacity-60"
+    >
+      Generate Restock List
+    </button>
+    <div id="replenish-result" class="mt-4 text-sm text-gray-400 italic">
+      Log meals for a few days first so AI can learn your consumption patterns.
+    </div>
+  </div>
+</section>
+{% endblock %}

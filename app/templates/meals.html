@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Meals — Food Inventory{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-5">
+  <h1 class="text-2xl font-bold">Meal Log</h1>
+  <button onclick="openMealSheet()"
+    class="bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-xl">
+    + Log Meal
+  </button>
+</div>
+
+<!-- Tracks which date is currently selected -->
+<input type="hidden" id="selected-date" value="{{ today.isoformat() }}">
+
+<!-- 7-day calendar strip -->
+<div class="flex gap-2 overflow-x-auto pb-2 mb-5 -mx-4 px-4 scrollbar-none">
+  {% for day in days %}
+  <button
+    hx-get="/meals/list?date={{ day.isoformat() }}"
+    hx-target="#meal-list"
+    hx-swap="innerHTML"
+    onclick="selectDay('{{ day.isoformat() }}', this)"
+    class="day-btn flex flex-col items-center shrink-0 w-12 py-2 rounded-xl border text-xs font-medium transition-colors
+      {% if day == today %}bg-green-600 text-white border-green-600{% else %}bg-white text-gray-600 border-gray-100{% endif %}">
+    <span>{{ day.strftime('%a') }}</span>
+    <span class="text-lg font-bold mt-0.5">{{ day.day }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+<!-- Meal list for selected day -->
+<div id="meal-list" class="flex flex-col gap-3">
+  {% include "partials/meal_list.html" %}
+</div>
+
+<!-- Bottom sheet overlay -->
+<div id="overlay" class="hidden fixed inset-0 bg-black/50 z-10" onclick="closeSheet()"></div>
+
+<!-- Bottom sheet -->
+<div id="sheet" class="hidden fixed bottom-0 inset-x-0 z-20 max-w-lg mx-auto">
+  <div class="bg-white rounded-t-2xl max-h-[92vh] overflow-y-auto">
+    <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1"></div>
+    <div id="sheet-content" class="px-5 pb-10 pt-2"></div>
+  </div>
+</div>
+
+<script>
+  function selectDay(date, el) {
+    document.querySelectorAll('.day-btn').forEach(b => {
+      b.classList.remove('bg-green-600', 'text-white', 'border-green-600');
+      b.classList.add('bg-white', 'text-gray-600', 'border-gray-100');
+    });
+    el.classList.add('bg-green-600', 'text-white', 'border-green-600');
+    el.classList.remove('bg-white', 'text-gray-600', 'border-gray-100');
+    document.getElementById('selected-date').value = date;
+  }
+
+  function openMealSheet() {
+    const date = document.getElementById('selected-date').value;
+    htmx.ajax('GET', `/meals/form?date=${date}`, {
+      target: '#sheet-content',
+      swap: 'innerHTML'
+    });
+    openSheet();
+  }
+
+  function openSheet() {
+    document.getElementById('overlay').classList.remove('hidden');
+    document.getElementById('sheet').classList.remove('hidden');
+  }
+
+  function closeSheet() {
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('sheet').classList.add('hidden');
+    document.getElementById('sheet-content').innerHTML = '';
+  }
+</script>
+{% endblock %}

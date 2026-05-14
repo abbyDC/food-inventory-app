@@ -1,0 +1,31 @@
+{% set type_colors = {
+  'BREAKFAST': 'bg-orange-100 text-orange-700',
+  'LUNCH':     'bg-blue-100 text-blue-700',
+  'DINNER':    'bg-purple-100 text-purple-700',
+  'SNACK':     'bg-yellow-100 text-yellow-700'
+} %}
+
+{% if error %}
+<div class="mt-4 bg-red-50 border border-red-100 rounded-xl p-4 text-sm text-red-600">
+  Could not generate suggestion — check your API key and try again.
+</div>
+{% elif data %}
+<div class="mt-4">
+  {% if meal_type %}
+  <span class="inline-block text-xs font-semibold px-2.5 py-1 rounded-full mb-2 {{ type_colors.get(meal_type, 'bg-gray-100 text-gray-600') }}">
+    {{ meal_type.capitalize() }}
+  </span>
+  {% endif %}
+  <p class="font-semibold text-gray-900 mb-1">{{ data.suggestion }}</p>
+  <p class="text-sm text-gray-500 mb-3">{{ data.reasoning }}</p>
+  {% if data.use_these_items %}
+  <div class="flex flex-wrap gap-2">
+    {% for item in data.use_these_items %}
+    <span class="text-xs bg-green-100 text-green-700 font-medium px-2.5 py-1 rounded-full">{{ item }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="mt-4 text-sm text-gray-400 italic">No suggestion available.</div>
+{% endif %}

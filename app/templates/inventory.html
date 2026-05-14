@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Inventory — Food Inventory{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-5">
+  <h1 class="text-2xl font-bold">Inventory</h1>
+  <button
+    hx-get="/items/form"
+    hx-target="#sheet-content"
+    hx-swap="innerHTML"
+    onclick="openSheet()"
+    class="bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-xl">
+    + Add Item
+  </button>
+</div>
+
+<!-- Live search -->
+<div class="mb-4">
+  <input
+    type="text"
+    name="q"
+    placeholder="Search items..."
+    hx-get="/items/search"
+    hx-trigger="keyup changed delay:300ms"
+    hx-target="#item-list"
+    hx-swap="innerHTML"
+    class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+  />
+</div>
+
+<!-- Item list -->
+<div id="item-list" class="flex flex-col gap-3">
+  {% include "partials/item_list.html" %}
+</div>
+
+<!-- Bottom sheet overlay -->
+<div id="overlay" class="hidden fixed inset-0 bg-black/50 z-10" onclick="closeSheet()"></div>
+
+<!-- Bottom sheet -->
+<div id="sheet" class="hidden fixed bottom-0 inset-x-0 z-20 max-w-lg mx-auto">
+  <div class="bg-white rounded-t-2xl max-h-[90vh] overflow-y-auto">
+    <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-1"></div>
+    <div id="sheet-content" class="px-5 pb-10 pt-2"></div>
+  </div>
+</div>
+
+<script>
+  function openSheet() {
+    document.getElementById('overlay').classList.remove('hidden');
+    document.getElementById('sheet').classList.remove('hidden');
+  }
+  function closeSheet() {
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('sheet').classList.add('hidden');
+    document.getElementById('sheet-content').innerHTML = '';
+  }
+</script>
+{% endblock %}

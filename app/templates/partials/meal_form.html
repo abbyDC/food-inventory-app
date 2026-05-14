@@ -1,0 +1,216 @@
+<div class="flex items-center justify-between mb-5">
+  <h2 class="text-lg font-semibold">Log Meal</h2>
+  <button onclick="closeSheet()" class="text-gray-400 text-2xl leading-none">&times;</button>
+</div>
+
+<div id="inventory-data" data-items='{{ inventory_json }}'></div>
+
+<form
+  hx-post="/meals"
+  hx-target="#meal-list"
+  hx-swap="innerHTML"
+  hx-on::after-request="if(event.detail.successful) closeSheet()"
+  class="space-y-5">
+
+  <input type="hidden" name="meal_date" value="{{ selected_date }}">
+  <input type="hidden" name="items_json" id="items-json" value="[]">
+
+  <!-- Meal type -->
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-2">Meal Type</label>
+    <div class="grid grid-cols-2 gap-2">
+      {% for mtype in ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] %}
+      <label class="cursor-pointer">
+        <input type="radio" name="meal_type" value="{{ mtype }}" class="hidden peer"
+          {% if loop.first %}checked{% endif %}>
+        <div class="peer-checked:bg-green-600 peer-checked:text-white peer-checked:border-green-600
+                    text-center py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 transition-colors">
+          {{ mtype.capitalize() }}
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Item picker -->
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-2">Items Used</label>
+    <input type="text" id="item-search" placeholder="Search inventory or type a new item..."
+      autocomplete="off"
+      class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+    <div id="item-suggestions"
+      class="hidden mt-1 bg-white border border-gray-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto shadow-sm">
+    </div>
+    <div id="selected-items" class="mt-3 space-y-2"></div>
+  </div>
+
+  <!-- Notes -->
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">Notes <span class="text-gray-400 font-normal">(optional)</span></label>
+    <textarea name="notes" rows="2" placeholder="e.g. Had with hot sauce"
+      class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+  </div>
+
+  <button type="submit"
+    class="w-full bg-green-600 text-white font-semibold py-3 rounded-xl text-sm">
+    Log Meal
+  </button>
+
+</form>
+
+<script>
+(function () {
+  const inventory = JSON.parse(document.getElementById('inventory-data').dataset.items);
+  const searchInput = document.getElementById('item-search');
+  const suggestionsBox = document.getElementById('item-suggestions');
+  const selectedDiv = document.getElementById('selected-items');
+  const itemsJsonInput = document.getElementById('items-json');
+  const selectedKeys = new Set();
+
+  function esc(str) {
+    return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function sanitizeKey(str) {
+    return str.replace(/[^a-z0-9]/gi, '-');
+  }
+
+  function syncJson() {
+    const rows = selectedDiv.querySelectorAll('[data-item-key]');
+    const items = Array.from(rows).map(row => ({
+      id: row.dataset.itemId ? parseInt(row.dataset.itemId) : null,
+      name: row.dataset.itemName,
+      unit: row.dataset.itemUnit,
+      quantity: parseFloat(row.querySelector('input[type="number"]').value) || 1,
+      track_inventory: row.dataset.trackInventory === 'true',
+    }));
+    itemsJsonInput.value = JSON.stringify(items);
+  }
+
+  function setTrack(row, track) {
+    row.dataset.trackInventory = track;
+    row.querySelectorAll('[data-track-btn]').forEach(btn => {
+      const active = btn.dataset.trackBtn === String(track);
+      btn.className = active
+        ? `text-xs px-2.5 py-1 rounded-lg font-medium ${track ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`
+        : 'text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-400';
+    });
+    syncJson();
+  }
+
+  function addItem(id, name, unit) {
+    const key = id ? `inv-${id}` : `name-${name.toLowerCase()}`;
+    if (selectedKeys.has(key)) return;
+    selectedKeys.add(key);
+
+    searchInput.value = '';
+    suggestionsBox.classList.add('hidden');
+
+    const rowId = `sel-${sanitizeKey(key)}`;
+    const row = document.createElement('div');
+    row.id = rowId;
+    row.dataset.itemKey = key;
+    row.dataset.itemId = id || '';
+    row.dataset.itemName = name;
+    row.dataset.itemUnit = unit;
+    row.dataset.trackInventory = 'false';
+    row.className = 'bg-gray-50 rounded-xl px-3 py-2.5 space-y-2';
+    row.innerHTML = `
+      <div class="flex items-center gap-2">
+        <span class="flex-1 text-sm font-medium truncate">${name}</span>
+        ${!id ? '<span class="text-xs text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded shrink-0">new</span>' : ''}
+        <input type="number" value="1" min="0.1" step="0.1"
+          class="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500" />
+        <span class="text-xs text-gray-400 shrink-0">${unit}</span>
+        <button type="button" data-remove-key="${key}"
+          class="text-gray-300 hover:text-red-400 text-xl leading-none ml-1">&times;</button>
+      </div>
+      ${!id ? `
+      <div class="flex gap-1.5">
+        <button type="button" data-track-btn="false"
+          class="text-xs px-2.5 py-1 rounded-lg font-medium bg-blue-100 text-blue-700">
+          One-time only
+        </button>
+        <button type="button" data-track-btn="true"
+          class="text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-400">
+          + Add to inventory
+        </button>
+      </div>` : ''}
+    `;
+    selectedDiv.appendChild(row);
+
+    row.querySelectorAll('[data-track-btn]').forEach(btn => {
+      btn.addEventListener('mousedown', e => {
+        e.preventDefault();
+        setTrack(row, btn.dataset.trackBtn === 'true');
+      });
+    });
+
+    syncJson();
+  }
+
+  // Mousedown + preventDefault prevents blur from hiding suggestions before click registers
+  suggestionsBox.addEventListener('mousedown', function (e) {
+    e.preventDefault();
+    const btn = e.target.closest('button[data-type]');
+    if (!btn) return;
+    if (btn.dataset.type === 'inventory') {
+      addItem(parseInt(btn.dataset.id), btn.dataset.name, btn.dataset.unit);
+    } else {
+      addItem(null, btn.dataset.name, 'units');
+    }
+  });
+
+  // Remove items + quantity changes
+  selectedDiv.addEventListener('click', function (e) {
+    const btn = e.target.closest('button[data-remove-key]');
+    if (!btn) return;
+    const key = btn.dataset.removeKey;
+    selectedKeys.delete(key);
+    document.getElementById(`sel-${sanitizeKey(key)}`)?.remove();
+    syncJson();
+  });
+
+  selectedDiv.addEventListener('input', function (e) {
+    if (e.target.type === 'number') syncJson();
+  });
+
+  searchInput.addEventListener('input', function () {
+    const q = this.value.trim();
+    if (!q) { suggestionsBox.classList.add('hidden'); return; }
+
+    const ql = q.toLowerCase();
+    const matches = inventory.filter(i => i.name.toLowerCase().includes(ql));
+    const exactMatch = inventory.find(i => i.name.toLowerCase() === ql);
+
+    let html = matches.map(i => `
+      <button type="button" data-type="inventory"
+        data-id="${i.id}" data-name="${esc(i.name)}" data-unit="${esc(i.unit)}"
+        class="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0 flex justify-between items-center">
+        <span class="font-medium pointer-events-none">${i.name}</span>
+        <span class="text-gray-400 text-xs pointer-events-none">${i.quantity} ${i.unit} left</span>
+      </button>
+    `).join('');
+
+    if (!exactMatch) {
+      html += `
+        <button type="button" data-type="new" data-name="${esc(q)}"
+          class="w-full text-left px-4 py-2.5 text-sm bg-green-50 hover:bg-green-100 border-t border-gray-100 flex justify-between items-center">
+          <span class="font-medium text-green-700 pointer-events-none">+ Add "${q}" to meal</span>
+          <span class="text-xs text-green-500 pointer-events-none">not in inventory</span>
+        </button>
+      `;
+    }
+
+    suggestionsBox.innerHTML = html;
+    suggestionsBox.classList.remove('hidden');
+  });
+
+  searchInput.addEventListener('blur', function () {
+    setTimeout(() => suggestionsBox.classList.add('hidden'), 150);
+  });
+
+  // Sync JSON right before HTMX submits (captures latest quantity values)
+  document.querySelector('form').addEventListener('submit', syncJson);
+})();
+</script>
