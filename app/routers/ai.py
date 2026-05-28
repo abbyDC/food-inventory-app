@@ -1,5 +1,7 @@
 import json
 import re
+from datetime import date
+from pathlib import Path
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
@@ -7,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.services.ai_service import get_ai_response
 
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 router = APIRouter()
 
 
@@ -46,7 +48,6 @@ async def suggest_meal(
     for e in expiring:
         if not e.get("name") or not e.get("expires_at"):
             continue
-        from datetime import date
         today = date.today()
         try:
             exp_date = date.fromisoformat(e["expires_at"])
@@ -132,7 +133,6 @@ async def replenish(
     for e in expiring:
         if not e.get("name") or not e.get("expires_at"):
             continue
-        from datetime import date
         today = date.today()
         try:
             exp_date = date.fromisoformat(e["expires_at"])
