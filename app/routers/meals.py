@@ -17,21 +17,14 @@ def week_days():
 @router.get("/meals", response_class=HTMLResponse)
 async def meals_page(request: Request):
     today = date_cls.today()
-    return templates.TemplateResponse(
-        "meals.html",
-        {
-            "request": request,
-            "days": week_days(),
-            "today": today,
-            "active_page": "meals",
-        },
-    )
+    return templates.TemplateResponse(request, "meals.html", {
+        "days": week_days(),
+        "today": today,
+        "active_page": "meals",
+    })
 
 
 @router.get("/meals/form", response_class=HTMLResponse)
 async def meal_form(request: Request, date: str = ""):
     selected_date = date or date_cls.today().isoformat()
-    return templates.TemplateResponse(
-        "partials/meal_form.html",
-        {"request": request, "selected_date": selected_date},
-    )
+    return templates.TemplateResponse(request, "partials/meal_form.html", {"selected_date": selected_date})

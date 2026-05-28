@@ -11,15 +11,9 @@ router = APIRouter()
 
 @router.get("/inventory", response_class=HTMLResponse)
 async def inventory_page(request: Request):
-    return templates.TemplateResponse(
-        "inventory.html",
-        {"request": request, "active_page": "inventory"},
-    )
+    return templates.TemplateResponse(request, "inventory.html", {"active_page": "inventory"})
 
 
 @router.get("/items/form", response_class=HTMLResponse)
 async def item_form(request: Request):
-    return templates.TemplateResponse(
-        "partials/item_form.html",
-        {"request": request, "today_str": date.today().isoformat()},
-    )
+    return templates.TemplateResponse(request, "partials/item_form.html", {"today_str": date.today().isoformat()})

@@ -21,7 +21,7 @@ def _parse_json(raw: str) -> dict:
 
 @router.get("/ai", response_class=HTMLResponse)
 async def ai_page(request: Request):
-    return templates.TemplateResponse("ai.html", {"request": request, "active_page": "ai"})
+    return templates.TemplateResponse(request, "ai.html", {"active_page": "ai"})
 
 
 @router.post("/ai/suggest-meal", response_class=HTMLResponse)
@@ -82,10 +82,7 @@ async def suggest_meal(
     except Exception as e:
         error = str(e)
 
-    return templates.TemplateResponse(
-        "partials/ai_suggestion.html",
-        {"request": request, "data": data, "error": error, "meal_type": meal_type},
-    )
+    return templates.TemplateResponse(request, "partials/ai_suggestion.html", {"data": data, "error": error, "meal_type": meal_type})
 
 
 @router.post("/ai/replenish", response_class=HTMLResponse)
@@ -170,7 +167,4 @@ async def replenish(
         except Exception as e:
             error = str(e)
 
-    return templates.TemplateResponse(
-        "partials/ai_replenish.html",
-        {"request": request, "data": data, "error": error},
-    )
+    return templates.TemplateResponse(request, "partials/ai_replenish.html", {"data": data, "error": error})

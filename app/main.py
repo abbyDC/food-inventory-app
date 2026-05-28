@@ -24,11 +24,7 @@ app.include_router(ai.router)
 async def dashboard(request: Request):
     today = date.today()
     today_str = today.strftime("%A, %B") + " " + str(today.day)
-    return templates.TemplateResponse(
-        "dashboard.html",
-        {
-            "request": request,
-            "active_page": "dashboard",
-            "today_str": today_str,
-        },
-    )
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "active_page": "dashboard",
+        "today_str": today_str,
+    })
