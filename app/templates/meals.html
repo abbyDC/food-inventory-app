@@ -17,9 +17,6 @@
 <div class="flex gap-2 overflow-x-auto pb-2 mb-5 -mx-4 px-4 scrollbar-none">
   {% for day in days %}
   <button
-    hx-get="/meals/list?date={{ day.isoformat() }}"
-    hx-target="#meal-list"
-    hx-swap="innerHTML"
     onclick="selectDay('{{ day.isoformat() }}', this)"
     class="day-btn flex flex-col items-center shrink-0 w-12 py-2 rounded-xl border text-xs font-medium transition-colors
       {% if day == today %}bg-green-600 text-white border-green-600{% else %}bg-white text-gray-600 border-gray-100{% endif %}">
@@ -30,9 +27,7 @@
 </div>
 
 <!-- Meal list for selected day -->
-<div id="meal-list" class="flex flex-col gap-3">
-  {% include "partials/meal_list.html" %}
-</div>
+<div id="meal-list" class="flex flex-col gap-3"></div>
 
 <!-- Bottom sheet overlay -->
 <div id="overlay" class="hidden fixed inset-0 bg-black/50 z-10" onclick="closeSheet()"></div>
@@ -54,6 +49,7 @@
     el.classList.add('bg-green-600', 'text-white', 'border-green-600');
     el.classList.remove('bg-white', 'text-gray-600', 'border-gray-100');
     document.getElementById('selected-date').value = date;
+    Render.mealList(date);
   }
 
   function openMealSheet() {
@@ -75,5 +71,20 @@
     document.getElementById('sheet').classList.add('hidden');
     document.getElementById('sheet-content').innerHTML = '';
   }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    Render.mealList('{{ today.isoformat() }}');
+
+    document.getElementById('meal-list').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-action="delete-meal"]');
+      if (!btn) return;
+      var mealType = btn.dataset.mealType || 'meal';
+      if (confirm('Delete this ' + mealType + '?')) {
+        var date = document.getElementById('selected-date').value;
+        Store.deleteMeal(btn.dataset.id);
+        Render.mealList(date);
+      }
+    });
+  });
 </script>
 {% endblock %}

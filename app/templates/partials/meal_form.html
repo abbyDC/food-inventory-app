@@ -3,14 +3,13 @@
   <button onclick="closeSheet()" class="text-gray-400 text-2xl leading-none">&times;</button>
 </div>
 
-<div id="inventory-data" data-items='{{ inventory_json }}'></div>
+<div id="inventory-data"></div>
+<script>
+  document.getElementById('inventory-data').dataset.items =
+    localStorage.getItem('food_inventory_items') || '[]';
+</script>
 
-<form
-  hx-post="/meals"
-  hx-target="#meal-list"
-  hx-swap="innerHTML"
-  hx-on::after-request="if(event.detail.successful) closeSheet()"
-  class="space-y-5">
+<form id="meal-form" class="space-y-5">
 
   <input type="hidden" name="meal_date" value="{{ selected_date }}">
   <input type="hidden" name="items_json" id="items-json" value="[]">
@@ -78,7 +77,7 @@
   function syncJson() {
     const rows = selectedDiv.querySelectorAll('[data-item-key]');
     const items = Array.from(rows).map(row => ({
-      id: row.dataset.itemId ? parseInt(row.dataset.itemId) : null,
+      id: row.dataset.itemId || null,
       name: row.dataset.itemName,
       unit: row.dataset.itemUnit,
       quantity: parseFloat(row.querySelector('input[type="number"]').value) || 1,
@@ -155,7 +154,7 @@
     const btn = e.target.closest('button[data-type]');
     if (!btn) return;
     if (btn.dataset.type === 'inventory') {
-      addItem(parseInt(btn.dataset.id), btn.dataset.name, btn.dataset.unit);
+      addItem(btn.dataset.id, btn.dataset.name, btn.dataset.unit);
     } else {
       addItem(null, btn.dataset.name, 'units');
     }
@@ -210,7 +209,18 @@
     setTimeout(() => suggestionsBox.classList.add('hidden'), 150);
   });
 
-  // Sync JSON right before HTMX submits (captures latest quantity values)
-  document.querySelector('form').addEventListener('submit', syncJson);
+  document.getElementById('meal-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    syncJson();
+    var fd = new FormData(this);
+    Store.createMeal({
+      meal_type: fd.get('meal_type'),
+      meal_date: fd.get('meal_date'),
+      notes: fd.get('notes'),
+      items_json: fd.get('items_json'),
+    });
+    Render.mealList(fd.get('meal_date'));
+    closeSheet();
+  });
 })();
 </script>

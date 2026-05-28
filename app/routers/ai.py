@@ -1,16 +1,10 @@
 import json
 import re
-from collections import defaultdict
-from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func
-from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.models import Item, Meal, MealItem
 from app.services.ai_service import get_ai_response
 
 templates = Jinja2Templates(directory="app/templates")
@@ -31,46 +25,40 @@ async def ai_page(request: Request):
 @router.post("/ai/suggest-meal", response_class=HTMLResponse)
 async def suggest_meal(
     request: Request,
-    db: Session = Depends(get_db),
     meal_type: str = Form(""),
+    history_json: str = Form("[]"),
+    expiry_json: str = Form("[]"),
 ):
-    cutoff = datetime.utcnow() - timedelta(days=14)
-    recent_q = (
-        db.query(MealItem, Meal)
-        .join(Meal, MealItem.meal_id == Meal.id)
-        .filter(Meal.logged_at >= cutoff)
-    )
-    if meal_type:
-        recent_q = recent_q.filter(Meal.meal_type == meal_type.upper())
-    recent = recent_q.all()
-
-    by_item: dict = defaultdict(float)
-    for mi, meal in recent:
-        if mi.item:
-            by_item[mi.item.name] += mi.quantity_used
-
-    expiry_cutoff = datetime.utcnow() + timedelta(days=7)
-    expiring = (
-        db.query(Item)
-        .filter(
-            Item.track_inventory == True,
-            Item.expires_at.isnot(None),
-            Item.expires_at <= expiry_cutoff,
-            Item.quantity > 0,
-        )
-        .order_by(Item.expires_at.asc())
-        .all()
-    )
+    try:
+        history = json.loads(history_json)
+    except Exception:
+        history = []
+    try:
+        expiring = json.loads(expiry_json)
+    except Exception:
+        expiring = []
 
     history_lines = [
-        f"- {name}: used {round(qty, 1)} times" for name, qty in by_item.items()
+        f"- {e['name']}: used {round(float(e.get('quantity_used', 0)), 1)} times"
+        for e in history if e.get("name")
     ]
     expiry_lines = []
-    for item in expiring:
-        days = (item.expires_at.date() - datetime.utcnow().date()).days
-        label = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
+    for e in expiring:
+        if not e.get("name") or not e.get("expires_at"):
+            continue
+        from datetime import date
+        today = date.today()
+        try:
+            exp_date = date.fromisoformat(e["expires_at"])
+            days = (exp_date - today).days
+        except Exception:
+            days = None
+        if days is not None:
+            label = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
+        else:
+            label = "soon"
         expiry_lines.append(
-            f"- {item.name}: expires {label}, {round(item.quantity, 1)} {item.unit} left"
+            f"- {e['name']}: expires {label}, {round(float(e.get('quantity', 0)), 1)} {e.get('unit', 'units')} left"
         )
 
     meal_label = meal_type.capitalize() if meal_type else "any meal"
@@ -100,67 +88,63 @@ async def suggest_meal(
 
 
 @router.post("/ai/replenish", response_class=HTMLResponse)
-async def replenish(request: Request, db: Session = Depends(get_db)):
-    now = datetime.utcnow()
+async def replenish(
+    request: Request,
+    consumption_json: str = Form("[]"),
+    low_stock_json: str = Form("[]"),
+    expiry_json: str = Form("[]"),
+):
+    try:
+        consumption = json.loads(consumption_json)
+    except Exception:
+        consumption = []
+    try:
+        low_stock = json.loads(low_stock_json)
+    except Exception:
+        low_stock = []
+    try:
+        expiring = json.loads(expiry_json)
+    except Exception:
+        expiring = []
 
-    # Consumption over last 30 days (tracked items only)
-    cutoff = now - timedelta(days=30)
-    rows = (
-        db.query(MealItem.item_id, func.sum(MealItem.quantity_used).label("total"))
-        .join(Meal, MealItem.meal_id == Meal.id)
-        .filter(Meal.logged_at >= cutoff)
-        .group_by(MealItem.item_id)
-        .all()
-    )
     consumption_lines = []
-    for item_id, total in rows:
-        item = db.query(Item).filter(Item.id == item_id, Item.track_inventory == True).first()
-        if not item:
+    for e in consumption:
+        if not e.get("name"):
             continue
+        total = float(e.get("quantity_used_30d", 0))
+        current = float(e.get("current_quantity", 0))
+        unit = e.get("unit", "units")
         avg = round(total / 30, 3)
-        days_left = round(item.quantity / avg, 1) if avg > 0 else None
+        days_left = round(current / avg, 1) if avg > 0 else None
         suffix = f" (~{days_left} days left at this rate)" if days_left is not None else ""
         consumption_lines.append(
-            f"- {item.name}: used {round(total, 1)} {item.unit} in 30 days "
-            f"(avg {avg}/day), currently {round(item.quantity, 1)} {item.unit} in stock{suffix}"
+            f"- {e['name']}: used {round(total, 1)} {unit} in 30 days "
+            f"(avg {avg}/day), currently {round(current, 1)} {unit} in stock{suffix}"
         )
 
-    # Items below their low-stock threshold
-    low_stock = (
-        db.query(Item)
-        .filter(
-            Item.track_inventory == True,
-            Item.low_stock_at.isnot(None),
-            Item.quantity <= Item.low_stock_at,
-        )
-        .order_by(Item.name)
-        .all()
-    )
     low_stock_lines = [
-        f"- {item.name}: {round(item.quantity, 1)} {item.unit} left "
-        f"(low-stock threshold: {item.low_stock_at} {item.unit})"
-        for item in low_stock
+        f"- {e['name']}: {round(float(e.get('quantity', 0)), 1)} {e.get('unit', 'units')} left "
+        f"(low-stock threshold: {e.get('low_stock_at')} {e.get('unit', 'units')})"
+        for e in low_stock if e.get("name")
     ]
 
-    # Tracked items expiring within 14 days
-    expiry_cutoff = now + timedelta(days=14)
-    expiring = (
-        db.query(Item)
-        .filter(
-            Item.track_inventory == True,
-            Item.expires_at.isnot(None),
-            Item.expires_at <= expiry_cutoff,
-            Item.quantity > 0,
-        )
-        .order_by(Item.expires_at.asc())
-        .all()
-    )
     expiry_lines = []
-    for item in expiring:
-        days = (item.expires_at.date() - now.date()).days
-        label = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
+    for e in expiring:
+        if not e.get("name") or not e.get("expires_at"):
+            continue
+        from datetime import date
+        today = date.today()
+        try:
+            exp_date = date.fromisoformat(e["expires_at"])
+            days = (exp_date - today).days
+        except Exception:
+            days = None
+        if days is not None:
+            label = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
+        else:
+            label = "soon"
         expiry_lines.append(
-            f"- {item.name}: expires {label}, {round(item.quantity, 1)} {item.unit} remaining"
+            f"- {e['name']}: expires {label}, {round(float(e.get('quantity', 0)), 1)} {e.get('unit', 'units')} remaining"
         )
 
     sections = []

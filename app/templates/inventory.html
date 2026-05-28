@@ -20,18 +20,13 @@
     type="text"
     name="q"
     placeholder="Search items..."
-    hx-get="/items/search"
-    hx-trigger="keyup changed delay:300ms"
-    hx-target="#item-list"
-    hx-swap="innerHTML"
+    oninput="Render.itemList(this.value)"
     class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
   />
 </div>
 
 <!-- Item list -->
-<div id="item-list" class="flex flex-col gap-3">
-  {% include "partials/item_list.html" %}
-</div>
+<div id="item-list" class="flex flex-col gap-3"></div>
 
 <!-- Bottom sheet overlay -->
 <div id="overlay" class="hidden fixed inset-0 bg-black/50 z-10" onclick="closeSheet()"></div>
@@ -53,6 +48,24 @@
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('sheet').classList.add('hidden');
     document.getElementById('sheet-content').innerHTML = '';
+    window._editItem = null;
   }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    Render.itemList();
+
+    document.getElementById('item-list').addEventListener('click', function (e) {
+      var useBtn = e.target.closest('[data-action="use"]');
+      var editBtn = e.target.closest('[data-action="edit"]');
+      if (useBtn) {
+        Store.useItem(useBtn.dataset.id);
+        Render.itemList();
+      } else if (editBtn) {
+        window._editItem = Store.getItems().find(function (i) { return i.id === editBtn.dataset.id; });
+        htmx.ajax('GET', '/items/form', { target: '#sheet-content', swap: 'innerHTML' });
+        openSheet();
+      }
+    });
+  });
 </script>
 {% endblock %}

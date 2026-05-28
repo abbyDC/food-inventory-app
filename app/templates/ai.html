@@ -14,7 +14,7 @@
     <div class="grid grid-cols-2 gap-2">
       <button
         hx-post="/ai/suggest-meal"
-        hx-vals='{"meal_type":"BREAKFAST"}'
+        hx-vals='js:{meal_type:"BREAKFAST",history_json:Store.getRecentMealItemsJson(14,"BREAKFAST"),expiry_json:Store.getExpiringItemsJson(7)}'
         hx-target="#suggestion-result"
         hx-swap="innerHTML"
         hx-disabled-elt="closest section button"
@@ -22,7 +22,7 @@
       >Breakfast</button>
       <button
         hx-post="/ai/suggest-meal"
-        hx-vals='{"meal_type":"LUNCH"}'
+        hx-vals='js:{meal_type:"LUNCH",history_json:Store.getRecentMealItemsJson(14,"LUNCH"),expiry_json:Store.getExpiringItemsJson(7)}'
         hx-target="#suggestion-result"
         hx-swap="innerHTML"
         hx-disabled-elt="closest section button"
@@ -30,7 +30,7 @@
       >Lunch</button>
       <button
         hx-post="/ai/suggest-meal"
-        hx-vals='{"meal_type":"DINNER"}'
+        hx-vals='js:{meal_type:"DINNER",history_json:Store.getRecentMealItemsJson(14,"DINNER"),expiry_json:Store.getExpiringItemsJson(7)}'
         hx-target="#suggestion-result"
         hx-swap="innerHTML"
         hx-disabled-elt="closest section button"
@@ -38,7 +38,7 @@
       >Dinner</button>
       <button
         hx-post="/ai/suggest-meal"
-        hx-vals='{"meal_type":"SNACK"}'
+        hx-vals='js:{meal_type:"SNACK",history_json:Store.getRecentMealItemsJson(14,"SNACK"),expiry_json:Store.getExpiringItemsJson(7)}'
         hx-target="#suggestion-result"
         hx-swap="innerHTML"
         hx-disabled-elt="closest section button"
@@ -60,6 +60,7 @@
     </p>
     <button
       hx-post="/ai/replenish"
+      hx-vals='js:{consumption_json:Store.getConsumptionJson(),low_stock_json:Store.getLowStockJson(),expiry_json:Store.getExpiringItemsJson(14)}'
       hx-target="#replenish-result"
       hx-swap="innerHTML"
       hx-disabled-elt="this"

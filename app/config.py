@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "sqlite:///./food_inventory.db"
     ai_provider: str = "groq"
     groq_api_key: str = ""
     gemini_api_key: str = ""
@@ -10,6 +9,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

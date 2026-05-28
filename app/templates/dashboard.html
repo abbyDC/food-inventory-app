@@ -10,78 +10,22 @@
   </div>
 </div>
 
-{% set type_colors = {
-  'BREAKFAST': 'bg-orange-100 text-orange-700',
-  'LUNCH':     'bg-blue-100 text-blue-700',
-  'DINNER':    'bg-purple-100 text-purple-700',
-  'SNACK':     'bg-yellow-100 text-yellow-700'
-} %}
-
 <!-- Expiring Soon -->
 <section class="mb-6">
   <div class="flex justify-between items-center mb-2">
     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Expiring Soon</h2>
-    {% if expiring_soon %}
-      <a href="/inventory" class="text-xs text-green-600 font-medium">See all</a>
-    {% endif %}
+    <span id="expiring-see-all"></span>
   </div>
-
-  {% if expiring_soon %}
-    <div class="flex flex-col gap-2">
-      {% for item in expiring_soon %}
-        {% set days_left = (item.expires_at.date() - today).days %}
-        <a href="/inventory" class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between">
-          <div>
-            <p class="text-sm font-semibold text-gray-900">{{ item.name }}</p>
-            <p class="text-xs text-gray-400 mt-0.5">
-              {{ item.quantity | int if item.quantity == (item.quantity | int) else item.quantity }} {{ item.unit }} remaining
-            </p>
-          </div>
-          {% if days_left < 0 %}
-            <span class="text-xs font-semibold bg-red-100 text-red-700 px-2.5 py-1 rounded-full">Expired</span>
-          {% elif days_left == 0 %}
-            <span class="text-xs font-semibold bg-red-100 text-red-700 px-2.5 py-1 rounded-full">Today</span>
-          {% elif days_left <= 3 %}
-            <span class="text-xs font-semibold bg-red-100 text-red-700 px-2.5 py-1 rounded-full">{{ days_left }}d left</span>
-          {% else %}
-            <span class="text-xs font-semibold bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full">{{ days_left }}d left</span>
-          {% endif %}
-        </a>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div class="bg-white rounded-xl border border-gray-100 p-4 text-sm text-gray-400 italic">
-      Nothing expiring in the next 7 days.
-    </div>
-  {% endif %}
+  <div id="expiring-strip"></div>
 </section>
 
 <!-- Low Stock -->
 <section class="mb-6">
   <div class="flex justify-between items-center mb-2">
     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Low Stock</h2>
-    {% if low_stock %}
-      <a href="/inventory" class="text-xs text-green-600 font-medium">See all</a>
-    {% endif %}
+    <span id="low-stock-see-all"></span>
   </div>
-
-  {% if low_stock %}
-    <div class="flex flex-col gap-2">
-      {% for item in low_stock %}
-        <a href="/inventory" class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between">
-          <div>
-            <p class="text-sm font-semibold text-gray-900">{{ item.name }}</p>
-            <p class="text-xs text-gray-400 mt-0.5">{{ item.quantity | int if item.quantity == (item.quantity | int) else item.quantity }} {{ item.unit }} left</p>
-          </div>
-          <span class="text-xs font-semibold bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full">Restock</span>
-        </a>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div class="bg-white rounded-xl border border-gray-100 p-4 text-sm text-gray-400 italic">
-      All stocked up.
-    </div>
-  {% endif %}
+  <div id="low-stock-strip"></div>
 </section>
 
 <!-- Today's Meals -->
@@ -90,31 +34,12 @@
     <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Today's Meals</h2>
     <a href="/meals" class="text-xs text-green-600 font-medium">+ Log meal</a>
   </div>
-
-  {% if todays_meals %}
-    <div class="flex flex-col gap-2">
-      {% for meal in todays_meals %}
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
-          <div class="flex items-center gap-2 mb-1.5">
-            <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ type_colors.get(meal.meal_type, 'bg-gray-100 text-gray-600') }}">
-              {{ meal.meal_type.capitalize() }}
-            </span>
-            <span class="text-xs text-gray-400">{{ meal.logged_at.strftime('%-I:%M %p') }}</span>
-          </div>
-          {% if meal.meal_items %}
-            <p class="text-sm text-gray-600">
-              {{ meal.meal_items | map(attribute='item') | map(attribute='name') | list | join(', ') }}
-            </p>
-          {% endif %}
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div class="bg-white rounded-xl border border-gray-100 p-4 text-sm text-gray-400 italic">
-      No meals logged today.
-    </div>
-  {% endif %}
+  <div id="todays-meals-strip"></div>
 </section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () { Render.dashboard(); });
+</script>
 
 <!-- AI -->
 <section class="mb-6">
